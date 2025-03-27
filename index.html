@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Art Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 30px;
+        }
+
+        #controls {
+            margin-bottom: 20px;
+        }
+
+        #convertBtn, .copyBtn {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #imagePreview {
+            max-width: 300px;
+            max-height: 300px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        #pixelContainer {
+            display: grid;
+            gap: 1px;
+        }
+
+        .pixel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+            width: 10px;
+            height: 10px;
+            border: 1px solid #000;
+            transition: background 0.2s;
+        }
+
+        .hovered {
+            outline: 2px solid red;
+        }
+
+        #colorList, #pixelOrder {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-top: 10px;
+        }
+
+        .colorBox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .colorSample {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>Pixel Art Converter</h1>
+        <div id="controls">
+            <input type="file" id="imageInput" accept="image/*">
+            <br>
+            <img id="imagePreview">
+            <br>
+            <label>عرض الشبكة:</label>
+            <input type="number" id="gridWidth" min="1" value="20">
+            <label>ارتفاع الشبكة:</label>
+            <input type="number" id="gridHeight" min="1" value="20">
+            <br>
+            <label>عدد الألوان:</label>
+            <input type="range" id="colorCount" min="2" max="50" value="30">
+            <span id="colorCountValue">30</span>
+            <br>
+            <button id="convertBtn" disabled>تحويل الصورة</button>
+        </div>
+        <div id="pixelContainer"></div>
+    </div>
+
+    <div>
+        <h2>لوحة الألوان</h2>
+        <button class="copyBtn" onclick="copyText('colorList')">📋 نسخ الألوان</button>
+        <div id="colorList"></div>
+
+        <h3>ترتيب البكسلات</h3>
+        <button class="copyBtn" onclick="copyText('pixelOrder')">📋 نسخ الترتيب</button>
+        <div id="pixelOrder"></div>
+    </div>
+
+    <script>
+        let originalImage;
+        let pixelSize = 20;
+        let colorMap = new Map();
+        let lastHoveredPixel = null;
+
+        document.getElementById('imageInput').addEventListener('change', handleFileSelect);
+        document.getElementById('convertBtn').addEventListener('click', processImage);
+        document.getElementById('colorCount').addEventListener('input', function () {
+            document.getElementById('colorCountValue').textContent = this.value;
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                originalImage = new Image();
+                originalImage.onload = function() {
+                    document.getElementById('imagePreview').src = originalImage.src;
+                    document.getElementById('imagePreview').style.display = 'block';
+                    document.getElementById('convertBtn').disabled = false;
+                };
+                originalImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function processImage() {
+            if (!originalImage) return;
+
+            const gridWidth = parseInt(document.getElementById('gridWidth').value);
+            const gridHeight = parseInt(document.getElementById('gridHeight').value);
+            const maxColors = parseInt(document.getElementById('colorCount').value);
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = gridWidth;
+            canvas.height = gridHeight;
+
+            // رسم الصورة داخل الـcanvas بمقاس الشبكة
+            ctx.drawImage(originalImage, 0, 0, gridWidth, gridHeight);
+
+            let pixels = [];
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const pixelData = ctx.getImageData(x, y, 1, 1).data;
+                    pixels.push([pixelData[0], pixelData[1], pixelData[2]]);
+                }
+            }
+
+            // تقليص الألوان
+            const reducedColors = reduceColors(pixels, maxColors);
+            renderPixels(gridWidth, gridHeight, reducedColors);
+        }
+
+        function reduceColors(pixels, maxColors) {
+            let uniqueColors = [...new Set(pixels.map(([r, g, b]) => rgbToHex(r, g, b)))];
+
+            if (uniqueColors.length > maxColors) {
+                let colorPalette = uniqueColors.slice(0, maxColors);
+                return pixels.map(([r, g, b]) => findClosestColor(rgbToHex(r, g, b), colorPalette));
+            }
+            return pixels.map(([r, g, b]) => rgbToHex(r, g, b));
+        }
+
+        function findClosestColor(color, colorPalette) {
+            // دالة لاختيار أقرب لون
+            let minDist = Infinity;
+            let closestColor = color;
+
+            for (let paletteColor of colorPalette) {
+                let dist = colorDistance(color, paletteColor);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestColor = paletteColor;
+                }
+            }
+
+            return closestColor;
+        }
+
+        function colorDistance(color1, color2) {
+            // حساب المسافة بين لونين باستخدام الفرق بين القيم
+            let r1 = parseInt(color1.slice(1, 3), 16);
+            let g1 = parseInt(color1.slice(3, 5), 16);
+            let b1 = parseInt(color1.slice(5, 7), 16);
+
+            let r2 = parseInt(color2.slice(1, 3), 16);
+            let g2 = parseInt(color2.slice(3, 5), 16);
+            let b2 = parseInt(color2.slice(5, 7), 16);
+
+            return Math.sqrt(Math.pow(r2 - r1, 2) + Math.pow(g2 - g1, 2) + Math.pow(b2 - b1, 2));
+        }
+
+        function renderPixels(gridWidth, gridHeight, pixels) {
+            const container = document.getElementById('pixelContainer');
+            container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${gridWidth}, ${pixelSize}px)`;
+
+            colorMap.clear();
+            let pixelOrderList = [];
+
+            pixels.forEach((hexColor, index) => {
+                if (!colorMap.has(hexColor)) {
+                    colorMap.set(hexColor, { number: colorMap.size + 1, count: 0 });
+                }
+                colorMap.get(hexColor).count++;
+
+                const pixelDiv = document.createElement('div');
+                pixelDiv.className = 'pixel';
+                pixelDiv.style.backgroundColor = hexColor;
+                pixelDiv.textContent = colorMap.get(hexColor).number;
+                pixelDiv.dataset.originalColor = hexColor;
+
+                pixelDiv.addEventListener('mouseover', function () {
+                    if (lastHoveredPixel) lastHoveredPixel.style.backgroundColor = lastHoveredPixel.dataset.originalColor;
+                    this.style.backgroundColor = 'red';
+                    lastHoveredPixel = this;
+                });
+
+                container.appendChild(pixelDiv);
+
+                let x = (index % gridWidth) + 1;
+                let y = Math.floor(index / gridWidth) + 1;
+                pixelOrderList.push(`(${x}, ${y}): لون ${colorMap.get(hexColor).number}`);
+            });
+
+            updateColorList();
+            updatePixelOrder(pixelOrderList);
+        }
+
+        function updateColorList() {
+            document.getElementById('colorList').innerText = [...colorMap.entries()]
+                .map(([hex, data]) => `${data.number}: ${hex} - ${data.count} بكسل`).join('\n');
+        }
+
+        function updatePixelOrder(pixelOrderList) {
+            document.getElementById('pixelOrder').innerText = pixelOrderList.join('\n');
+        }
+
+        function copyText(id) {
+            navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => alert("تم النسخ!"));
+        }
+
+        function rgbToHex(r, g, b) {
+            return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase()}`;
+        }
+    </script>
+</body>
+</html>
