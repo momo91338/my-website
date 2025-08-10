@@ -1,1 +1,87 @@
-ه
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>احتمال صعود البيتكوين بعد ساعة</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f7f7f7;
+            padding: 20px;
+            direction: rtl;
+        }
+        #price {
+            font-size: 2em;
+            margin: 20px 0;
+        }
+        #probability {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        #countdown {
+            font-size: 1.2em;
+            color: #555;
+        }
+        .up { color: green; }
+        .down { color: red; }
+    </style>
+</head>
+<body>
+    <h1>📊 احتمال صعود البيتكوين بعد ساعة</h1>
+    <div id="price">جارٍ التحميل...</div>
+    <div id="probability"></div>
+    <div id="countdown"></div>
+
+    <script>
+        let nextHourTime = new Date();
+        nextHourTime.setHours(nextHourTime.getHours() + 1, 0, 0, 0);
+
+        function updateCountdown() {
+            let now = new Date();
+            let diff = nextHourTime - now;
+            if (diff <= 0) {
+                nextHourTime.setHours(nextHourTime.getHours() + 1);
+                fetchAndPredict();
+            }
+            let minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            let seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            document.getElementById("countdown").textContent = 
+                `⏳ الوقت المتبقي: ${minutes} دقيقة و ${seconds} ثانية`;
+        }
+
+        async function fetchAndPredict() {
+            try {
+                const res = await fetch("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1&interval=minute");
+                const data = await res.json();
+                const prices = data.prices.map(p => p[1]);
+
+                const lastPrice = prices[prices.length - 1];
+                document.getElementById("price").textContent = `💰 السعر الحالي: $${lastPrice.toFixed(2)}`;
+
+                // حساب التغيرات في آخر ساعة
+                const changes = [];
+                for (let i = prices.length - 60; i < prices.length; i++) {
+                    changes.push(prices[i] - prices[i - 1]);
+                }
+
+                const ups = changes.filter(c => c > 0).length;
+                const downs = changes.filter(c => c < 0).length;
+
+                const upProbability = (ups / (ups + downs)) * 100;
+                document.getElementById("probability").innerHTML = 
+                    `🔮 الاحتمال: <span class="${upProbability >= 50 ? 'up' : 'down'}">
+                        ${upProbability.toFixed(1)}% ${upProbability >= 50 ? 'صعود 📈' : 'هبوط 📉'}
+                    </span>`;
+            } catch (e) {
+                document.getElementById("price").textContent = "⚠️ خطأ في جلب البيانات";
+                console.error(e);
+            }
+        }
+
+        setInterval(updateCountdown, 1000);
+        fetchAndPredict();
+        setInterval(fetchAndPredict, 60 * 1000);
+    </script>
+</body>
+</html>
