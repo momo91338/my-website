@@ -1,87 +1,146 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <title>احتمال صعود البيتكوين بعد ساعة</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background: #f7f7f7;
-            padding: 20px;
-            direction: rtl;
-        }
-        #price {
-            font-size: 2em;
-            margin: 20px 0;
-        }
-        #probability {
-            font-size: 1.5em;
-            margin: 20px 0;
-        }
-        #countdown {
-            font-size: 1.2em;
-            color: #555;
-        }
-        .up { color: green; }
-        .down { color: red; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة مفاتيح متكاملة</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+    padding: 10px;
+  }
+  #inputField {
+    width: 95%;
+    font-size: 1.5em;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    border: 2px solid #ccc;
+    text-align: right;
+    min-height: 50px;
+    white-space: pre-wrap; /* لدعم Enter */
+  }
+  .keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+  }
+  .keys-row {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .key {
+    flex: 1 0 9%;
+    min-width: 35px;
+    padding: 12px 0;
+    font-size: 1.2em;
+    text-align: center;
+    border-radius: 8px;
+    background-color: #007bff;
+    color: white;
+    user-select: none;
+  }
+  .key:active { background-color: #0056b3; }
+  .special { background-color: #28a745; }
+  .special:active { background-color: #1e7e34; }
+  .mode-switch { background-color: #ff9500; }
+  .mode-switch:active { background-color: #cc7a00; }
+  .space { flex: 3; }
+</style>
 </head>
 <body>
-    <h1>📊 احتمال صعود البيتكوين بعد ساعة</h1>
-    <div id="price">جارٍ التحميل...</div>
-    <div id="probability"></div>
-    <div id="countdown"></div>
 
-    <script>
-        let nextHourTime = new Date();
-        nextHourTime.setHours(nextHourTime.getHours() + 1, 0, 0, 0);
+<input type="text" id="inputField" placeholder="اكتب هنا..." disabled>
 
-        function updateCountdown() {
-            let now = new Date();
-            let diff = nextHourTime - now;
-            if (diff <= 0) {
-                nextHourTime.setHours(nextHourTime.getHours() + 1);
-                fetchAndPredict();
-            }
-            let minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            let seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            document.getElementById("countdown").textContent = 
-                `⏳ الوقت المتبقي: ${minutes} دقيقة و ${seconds} ثانية`;
-        }
+<div class="keyboard">
 
-        async function fetchAndPredict() {
-            try {
-                const res = await fetch("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1&interval=minute");
-                const data = await res.json();
-                const prices = data.prices.map(p => p[1]);
+  <!-- الأحرف العربية -->
+  <div class="keys-row" id="arabic-keys"></div>
 
-                const lastPrice = prices[prices.length - 1];
-                document.getElementById("price").textContent = `💰 السعر الحالي: $${lastPrice.toFixed(2)}`;
+  <!-- الأرقام -->
+  <div class="keys-row" id="number-keys" style="display:none;"></div>
 
-                // حساب التغيرات في آخر ساعة
-                const changes = [];
-                for (let i = prices.length - 60; i < prices.length; i++) {
-                    changes.push(prices[i] - prices[i - 1]);
-                }
+  <!-- الرموز -->
+  <div class="keys-row" id="symbol-keys" style="display:none;"></div>
 
-                const ups = changes.filter(c => c > 0).length;
-                const downs = changes.filter(c => c < 0).length;
+  <!-- الإيموجي -->
+  <div class="keys-row" id="emoji-keys" style="display:none;"></div>
 
-                const upProbability = (ups / (ups + downs)) * 100;
-                document.getElementById("probability").innerHTML = 
-                    `🔮 الاحتمال: <span class="${upProbability >= 50 ? 'up' : 'down'}">
-                        ${upProbability.toFixed(1)}% ${upProbability >= 50 ? 'صعود 📈' : 'هبوط 📉'}
-                    </span>`;
-            } catch (e) {
-                document.getElementById("price").textContent = "⚠️ خطأ في جلب البيانات";
-                console.error(e);
-            }
-        }
+  <!-- أزرار التحكم -->
+  <div class="keys-row">
+    <div class="key mode-switch" onclick="switchMode('arabic')">أحرف</div>
+    <div class="key mode-switch" onclick="switchMode('numbers')">أرقام</div>
+    <div class="key mode-switch" onclick="switchMode('symbols')">رموز</div>
+    <div class="key mode-switch" onclick="switchMode('emoji')">😊</div>
+    <div class="key special" onclick="backspace()">⌫</div>
+    <div class="key special" onclick="clearInput()">C</div>
+  </div>
 
-        setInterval(updateCountdown, 1000);
-        fetchAndPredict();
-        setInterval(fetchAndPredict, 60 * 1000);
-    </script>
+  <!-- Space و Enter -->
+  <div class="keys-row">
+    <div class="key space special" onclick="addSpace()">Space</div>
+    <div class="key special" onclick="addEnter()">Enter</div>
+  </div>
+
+</div>
+
+<script>
+  const inputField = document.getElementById('inputField');
+
+  const arabicLetters = ['ا','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي','ء','ى','ئ','ؤ'];
+  const numbers = ['0','1','2','3','4','5','6','7','8','9'];
+  const symbols = ['!','@','#','$','%','^','&','*','(',')','_','+','-','=','/','?','.',','];
+  const emojis = ['😀','😂','😍','😊','😎'😏,'😢','😡','👍','🙏','🎉✅','❤️'];
+
+  function createKeys(containerId, keysArray) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    keysArray.forEach(key => {
+      const btn = document.createElement('div');
+      btn.className = 'key';
+      btn.innerText = key;
+      btn.onclick = () => inputField.value += key;
+      container.appendChild(btn);
+    });
+  }
+
+  createKeys('arabic-keys', arabicLetters);
+  createKeys('number-keys', numbers);
+  createKeys('symbol-keys', symbols);
+  createKeys('emoji-keys', emojis);
+
+  function switchMode(mode) {
+    document.getElementById('arabic-keys').style.display = (mode==='arabic') ? 'flex' : 'none';
+    document.getElementById('number-keys').style.display = (mode==='numbers') ? 'flex' : 'none';
+    document.getElementById('symbol-keys').style.display = (mode==='symbols') ? 'flex' : 'none';
+    document.getElementById('emoji-keys').style.display = (mode==='emoji') ? 'flex' : 'none';
+  }
+
+  function backspace() {
+    inputField.value = inputField.value.slice(0, -1);
+  }
+
+  function clearInput() {
+    inputField.value = '';
+  }
+
+  function addSpace() {
+    inputField.value += ' ';
+  }
+
+  function addEnter() {
+    inputField.value += '\n';
+  }
+</script>
+
 </body>
 </html>
