@@ -3,144 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة مفاتيح متكاملة</title>
+<title>آلة حاسبة</title>
 <style>
   body {
     font-family: Arial, sans-serif;
     display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
     height: 100vh;
     background-color: #f0f0f0;
-    padding: 10px;
   }
-  #inputField {
-    width: 95%;
-    font-size: 1.5em;
-    padding: 10px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    border: 2px solid #ccc;
-    text-align: right;
-    min-height: 50px;
-    white-space: pre-wrap; /* لدعم Enter */
+  .calculator {
+    background: #fff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   }
-  .keyboard {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+  .display {
     width: 100%;
+    height: 60px;
+    font-size: 2em;
+    text-align: right;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
   }
-  .keys-row {
-    display: flex;
-    justify-content: center;
-    gap: 5px;
-    flex-wrap: wrap;
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 70px);
+    gap: 10px;
   }
-  .key {
-    flex: 1 0 9%;
-    min-width: 35px;
-    padding: 12px 0;
+  button {
+    padding: 20px;
     font-size: 1.2em;
-    text-align: center;
-    border-radius: 8px;
+    border: none;
+    border-radius: 10px;
     background-color: #007bff;
     color: white;
-    user-select: none;
   }
-  .key:active { background-color: #0056b3; }
-  .special { background-color: #28a745; }
-  .special:active { background-color: #1e7e34; }
-  .mode-switch { background-color: #ff9500; }
-  .mode-switch:active { background-color: #cc7a00; }
-  .space { flex: 3; }
+  button:hover {
+    background-color: #0056b3;
+  }
+  .operator {
+    background-color: #ff9500;
+  }
+  .operator:hover {
+    background-color: #cc7a00;
+  }
+  .equals {
+    background-color: #28a745;
+    grid-column: span 2;
+  }
+  .equals:hover {
+    background-color: #1e7e34;
+  }
+  .clear {
+    background-color: #dc3545;
+  }
+  .clear:hover {
+    background-color: #a71d2a;
+  }
 </style>
 </head>
 <body>
+<div class="calculator">
+  <input type="text" class="display" id="display" disabled>
+  <div class="buttons">
+    <button onclick="appendNumber('7')">7</button>
+    <button onclick="appendNumber('8')">8</button>
+    <button onclick="appendNumber('9')">9</button>
+    <button class="operator" onclick="appendOperator('/')">÷</button>
 
-<input type="text" id="inputField" placeholder="اكتب هنا..." disabled>
+    <button onclick="appendNumber('4')">4</button>
+    <button onclick="appendNumber('5')">5</button>
+    <button onclick="appendNumber('6')">6</button>
+    <button class="operator" onclick="appendOperator('*')">×</button>
 
-<div class="keyboard">
+    <button onclick="appendNumber('1')">1</button>
+    <button onclick="appendNumber('2')">2</button>
+    <button onclick="appendNumber('3')">3</button>
+    <button class="operator" onclick="appendOperator('-')">−</button>
 
-  <!-- الأحرف العربية -->
-  <div class="keys-row" id="arabic-keys"></div>
+    <button onclick="appendNumber('0')">0</button>
+    <button onclick="appendNumber('.')">.</button>
+    <button class="equals" onclick="calculate()">=</button>
+    <button class="operator" onclick="appendOperator('+')">+</button>
 
-  <!-- الأرقام -->
-  <div class="keys-row" id="number-keys" style="display:none;"></div>
-
-  <!-- الرموز -->
-  <div class="keys-row" id="symbol-keys" style="display:none;"></div>
-
-  <!-- الإيموجي -->
-  <div class="keys-row" id="emoji-keys" style="display:none;"></div>
-
-  <!-- أزرار التحكم -->
-  <div class="keys-row">
-    <div class="key mode-switch" onclick="switchMode('arabic')">أحرف</div>
-    <div class="key mode-switch" onclick="switchMode('numbers')">أرقام</div>
-    <div class="key mode-switch" onclick="switchMode('symbols')">رموز</div>
-    <div class="key mode-switch" onclick="switchMode('emoji')">😊</div>
-    <div class="key special" onclick="backspace()">⌫</div>
-    <div class="key special" onclick="clearInput()">C</div>
+    <button class="clear" onclick="clearDisplay()">C</button>
   </div>
-
-  <!-- Space و Enter -->
-  <div class="keys-row">
-    <div class="key space special" onclick="addSpace()">Space</div>
-    <div class="key special" onclick="addEnter()">Enter</div>
-  </div>
-
 </div>
 
 <script>
-  const inputField = document.getElementById('inputField');
+  let display = document.getElementById('display');
 
-  const arabicLetters = ['ا','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي','ء','ى','ئ','ؤ'];
-  const numbers = ['0','1','2','3','4','5','6','7','8','9'];
-  const symbols = ['!','@','#','$','%','^','&','*','(',')','_','+','-','=','/','?','.',','];
-  const emojis = ['😀','😂','😍','😊','😎'😏,'😢','😡','👍','🙏','🎉✅','❤️'];
-
-  function createKeys(containerId, keysArray) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    keysArray.forEach(key => {
-      const btn = document.createElement('div');
-      btn.className = 'key';
-      btn.innerText = key;
-      btn.onclick = () => inputField.value += key;
-      container.appendChild(btn);
-    });
+  function appendNumber(num) {
+    display.value += num;
   }
 
-  createKeys('arabic-keys', arabicLetters);
-  createKeys('number-keys', numbers);
-  createKeys('symbol-keys', symbols);
-  createKeys('emoji-keys', emojis);
-
-  function switchMode(mode) {
-    document.getElementById('arabic-keys').style.display = (mode==='arabic') ? 'flex' : 'none';
-    document.getElementById('number-keys').style.display = (mode==='numbers') ? 'flex' : 'none';
-    document.getElementById('symbol-keys').style.display = (mode==='symbols') ? 'flex' : 'none';
-    document.getElementById('emoji-keys').style.display = (mode==='emoji') ? 'flex' : 'none';
+  function appendOperator(op) {
+    if(display.value !== '') display.value += op;
   }
 
-  function backspace() {
-    inputField.value = inputField.value.slice(0, -1);
+  function clearDisplay() {
+    display.value = '';
   }
 
-  function clearInput() {
-    inputField.value = '';
-  }
-
-  function addSpace() {
-    inputField.value += ' ';
-  }
-
-  function addEnter() {
-    inputField.value += '\n';
+  function calculate() {
+    try {
+      display.value = eval(display.value);
+    } catch {
+      display.value = 'خطأ';
+    }
   }
 </script>
-
 </body>
 </html>
